@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SalesforceTest.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3bfe905c140dbc5e7ea2c7c4a86350177e6e6a48")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a689abff1fcc25b94fe3218f26093d36e3dcd695")]
 [assembly: System.Reflection.AssemblyProductAttribute("SalesforceTest.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SalesforceTest.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
