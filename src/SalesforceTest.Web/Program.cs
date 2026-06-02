@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components.Authorization;
+using SalesforceTest.Web.Auth;
 using SalesforceTest.Web.Components;
 using SalesforceTest.Web.Services;
 
@@ -5,6 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<AppAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AppAuthStateProvider>());
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"]
     ?? throw new InvalidOperationException("ApiSettings:BaseUrl is not configured.");
