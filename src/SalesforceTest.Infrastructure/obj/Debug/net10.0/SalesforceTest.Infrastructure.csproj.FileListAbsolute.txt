@@ -1,0 +1,17 @@
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\bin\Debug\net10.0\SalesforceTest.Infrastructure.deps.json
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\bin\Debug\net10.0\SalesforceTest.Infrastructure.dll
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\bin\Debug\net10.0\SalesforceTest.Infrastructure.pdb
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\bin\Debug\net10.0\SalesforceTest.Application.dll
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\bin\Debug\net10.0\SalesforceTest.Domain.dll
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\bin\Debug\net10.0\SalesforceTest.Application.pdb
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\bin\Debug\net10.0\SalesforceTest.Domain.pdb
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\obj\Debug\net10.0\SalesforceTest.Infrastructure.csproj.AssemblyReference.cache
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\obj\Debug\net10.0\SalesforceTest.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\obj\Debug\net10.0\SalesforceTest.Infrastructure.AssemblyInfoInputs.cache
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\obj\Debug\net10.0\SalesforceTest.Infrastructure.AssemblyInfo.cs
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\obj\Debug\net10.0\SalesforceTest.Infrastructure.csproj.CoreCompileInputs.cache
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\obj\Debug\net10.0\Salesfor.27309132.Up2Date
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\obj\Debug\net10.0\SalesforceTest.Infrastructure.dll
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\obj\Debug\net10.0\refint\SalesforceTest.Infrastructure.dll
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\obj\Debug\net10.0\SalesforceTest.Infrastructure.pdb
+D:\TestRepos\Jose\SalesforceTest\src\SalesforceTest.Infrastructure\obj\Debug\net10.0\ref\SalesforceTest.Infrastructure.dll
