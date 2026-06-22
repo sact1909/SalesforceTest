@@ -8,12 +8,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddAuthorizationCore(options =>
+builder.Services.AddAuthentication(options =>
 {
-    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .Build();
-});
+    options.DefaultScheme = "NoOp";
+    options.DefaultChallengeScheme = "NoOp";
+})
+.AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, NoOpAuthHandler>("NoOp", _ => { });
+
+builder.Services.AddAuthorizationCore();
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AppAuthStateProvider>();
@@ -30,6 +32,7 @@ builder.Services.AddHttpClient("ApiClient", client =>
 });
 
 builder.Services.AddScoped<IApiService, ApiService>();
+builder.Services.AddScoped<ISalesforceService, SalesforceService>();
 
 var app = builder.Build();
 

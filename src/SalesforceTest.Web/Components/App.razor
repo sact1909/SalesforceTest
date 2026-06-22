@@ -11,16 +11,30 @@
     <link rel="stylesheet" href="@Assets["SalesforceTest.Web.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
-    <CascadingAuthenticationState>
-        <RestoreAuthState />
-        <Routes />
-    </CascadingAuthenticationState>
+    <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script>
+        function salesforceCallbackClose(success, error) {
+            if (window.opener) {
+                window.opener.postMessage({ type: 'sf_oauth', success: success, error: error }, window.location.origin);
+                setTimeout(() => window.close(), 800);
+            }
+        }
+
+        function salesforceRegisterListener(dotnetRef) {
+            function handler(event) {
+                if (event.origin !== window.location.origin) return;
+                if (!event.data || event.data.type !== 'sf_oauth') return;
+                dotnetRef.invokeMethodAsync('OnSalesforceCallback', event.data.success, event.data.error || null);
+            }
+            window.addEventListener('message', handler);
+        }
+    </script>
 </body>
 
 </html>

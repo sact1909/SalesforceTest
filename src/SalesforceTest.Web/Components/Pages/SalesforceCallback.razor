@@ -1,0 +1,41 @@
+@page "/sf-callback"
+@layout AuthLayout
+@attribute [AllowAnonymous]
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="d-flex justify-content-center align-items-center" style="min-height:100vh;">
+    <div class="text-center">
+        @if (_error is not null)
+        {
+            <p class="text-danger">@_error</p>
+            <p class="text-muted small">You can close this window.</p>
+        }
+        else
+        {
+            <p class="text-success">Salesforce connected successfully.</p>
+            <p class="text-muted small">Closing window...</p>
+        }
+    </div>
+</div>
+
+@code {
+    private string? _error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var success = query["sf_success"] == "true";
+        var error = query["sf_error"];
+
+        if (!success && error is not null)
+            _error = error;
+
+        StateHasChanged();
+
+        await JS.InvokeVoidAsync("salesforceCallbackClose", success, error);
+    }
+}

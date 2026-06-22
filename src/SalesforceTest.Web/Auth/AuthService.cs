@@ -60,26 +60,4 @@ public sealed class AuthService : IAuthService
         await _sessionStorage.DeleteAsync(SessionKey);
         _authStateProvider.NotifyUserLoggedOut();
     }
-
-    public async Task<AuthUser?> GetCurrentUserAsync()
-    {
-        try
-        {
-            var result = await _sessionStorage.GetAsync<AuthUser>(SessionKey);
-            if (!result.Success || result.Value is null)
-                return null;
-
-            if (result.Value.ExpiresAt <= DateTime.UtcNow)
-            {
-                await _sessionStorage.DeleteAsync(SessionKey);
-                return null;
-            }
-
-            return result.Value;
-        }
-        catch
-        {
-            return null;
-        }
-    }
 }

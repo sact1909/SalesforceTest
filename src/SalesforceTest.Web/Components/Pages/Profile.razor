@@ -1,0 +1,214 @@
+@page "/profile"
+@attribute [Authorize]
+@using System.Security.Claims
+@using SalesforceTest.Web.Services
+@using SalesforceTest.Web.Models
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISalesforceService SalesforceService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Profile</PageTitle>
+
+<div class="container py-4" style="max-width: 480px;">
+    <h3 class="mb-4">Profile</h3>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-4">
+                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-3"
+                     style="width:56px;height:56px;font-size:1.5rem;color:white;flex-shrink:0;">
+                    @(_initials)
+                </div>
+                <div>
+                    <h5 class="mb-0">@_fullName</h5>
+                    <small class="text-muted">@@@_username</small>
+                </div>
+            </div>
+
+            <hr />
+
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Full Name</dt>
+                <dd class="col-sm-8">@_fullName</dd>
+
+                <dt class="col-sm-4">Username</dt>
+                <dd class="col-sm-8">@_username</dd>
+
+                <dt class="col-sm-4">Email</dt>
+                <dd class="col-sm-8">@_email</dd>
+
+                <dt class="col-sm-4">Session expires</dt>
+                <dd class="col-sm-8">@_expiresAt</dd>
+            </dl>
+        </div>
+    </div>
+
+    @if (_sfSuccess)
+    {
+        <div class="alert alert-success mt-3" role="alert">
+            Salesforce account connected successfully.
+        </div>
+    }
+    @if (_sfError is not null)
+    {
+        <div class="alert alert-danger mt-3" role="alert">
+            Failed to connect Salesforce account: @_sfError
+        </div>
+    }
+
+    @if (_sfConnection?.IsConnected == true)
+    {
+        <div class="card mt-3 border-success">
+            <div class="card-body p-4">
+                <h6 class="card-title text-success mb-3">
+                    <span class="me-2">&#10003;</span> Salesforce Connected
+                </h6>
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-5">Salesforce User</dt>
+                    <dd class="col-sm-7">@_sfConnection.DisplayName</dd>
+
+                    <dt class="col-sm-5">Email</dt>
+                    <dd class="col-sm-7">@_sfConnection.Email</dd>
+
+                    <dt class="col-sm-5">Organization ID</dt>
+                    <dd class="col-sm-7">@_sfConnection.OrganizationId</dd>
+
+                    <dt class="col-sm-5">Instance</dt>
+                    <dd class="col-sm-7">@_sfConnection.InstanceUrl</dd>
+                </dl>
+            </div>
+        </div>
+    }
+
+    <div class="mt-3 d-flex flex-column gap-2">
+        @if (_sfConnection?.IsConnected == true)
+        {
+            <button class="btn btn-outline-secondary w-100" @onclick="ConnectSalesforce" disabled="@(_sfLoading || _sfDisconnecting)">
+                @if (_sfLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Reconnect Salesforce Account
+            </button>
+            <button class="btn btn-outline-danger w-100" @onclick="DisconnectSalesforce" disabled="@(_sfLoading || _sfDisconnecting)">
+                @if (_sfDisconnecting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Disconnect Current Account
+            </button>
+        }
+        else
+        {
+            <button class="btn btn-outline-primary w-100" @onclick="ConnectSalesforce" disabled="@_sfLoading">
+                @if (_sfLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Connect Salesforce Account
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    private string _fullName = "";
+    private string _username = "";
+    private string _email = "";
+    private string _expiresAt = "";
+    private string _initials = "";
+    private bool _sfLoading;
+    private bool _sfDisconnecting;
+    private bool _sfSuccess;
+    private string? _sfError;
+    private SalesforceConnectionModel? _sfConnection;
+    private DotNetObjectReference<Profile>? _selfRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+
+        _fullName = user.FindFirst("FullName")?.Value ?? "";
+        _username = user.FindFirst(ClaimTypes.Name)?.Value ?? "";
+        _email = user.FindFirst(ClaimTypes.Email)?.Value ?? "";
+
+        var expiresRaw = user.FindFirst("ExpiresAt")?.Value;
+        if (DateTime.TryParse(expiresRaw, out var expires))
+            _expiresAt = expires.ToLocalTime().ToString("MMM dd, yyyy HH:mm");
+
+        _initials = string.Concat(
+            _fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                     .Take(2)
+                     .Select(w => w[0].ToString().ToUpper()));
+
+        if (string.IsNullOrEmpty(_initials) && !string.IsNullOrEmpty(_username))
+            _initials = _username[0].ToString().ToUpper();
+
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        _sfSuccess = query["sf_success"] == "true";
+        _sfError = query["sf_error"];
+
+        _sfConnection = await SalesforceService.GetConnectionAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _selfRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("salesforceRegisterListener", _selfRef);
+    }
+
+    [JSInvokable]
+    public async Task OnSalesforceCallback(bool success, string? error)
+    {
+        if (success)
+        {
+            _sfSuccess = true;
+            _sfError = null;
+            _sfConnection = await SalesforceService.GetConnectionAsync();
+        }
+        else
+        {
+            _sfError = error ?? "Unknown error.";
+        }
+        StateHasChanged();
+    }
+
+    private async Task ConnectSalesforce()
+    {
+        _sfLoading = true;
+        _sfError = null;
+        var url = await SalesforceService.GetAuthorizationUrlAsync();
+        if (url is not null)
+            await JS.InvokeVoidAsync("open", url, "_blank");
+        else
+            _sfError = "Could not reach the API. Please try again.";
+
+        _sfLoading = false;
+    }
+
+    private async Task DisconnectSalesforce()
+    {
+        _sfDisconnecting = true;
+        _sfError = null;
+        _sfSuccess = false;
+
+        var success = await SalesforceService.DisconnectAsync();
+        if (success)
+            _sfConnection = null;
+        else
+            _sfError = "Failed to disconnect. Please try again.";
+
+        _sfDisconnecting = false;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _selfRef?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

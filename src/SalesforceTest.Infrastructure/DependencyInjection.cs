@@ -28,6 +28,9 @@ public static class DependencyInjection
 
         services.AddScoped<DatabaseSeeder>();
 
+        services.AddScoped<ISalesforceConnectionRepository, SalesforceConnectionRepository>();
+        services.AddHttpClient<ISalesforceOAuthService, SalesforceOAuthService>();
+
         return services;
     }
 }

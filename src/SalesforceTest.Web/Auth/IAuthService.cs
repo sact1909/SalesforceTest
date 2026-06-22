@@ -6,5 +6,4 @@ public interface IAuthService
 {
     Task<(bool Success, string? Error)> LoginAsync(LoginModel model, CancellationToken cancellationToken = default);
     Task LogoutAsync();
-    Task<AuthUser?> GetCurrentUserAsync();
 }

@@ -1,14 +1,14 @@
 @page "/login"
+@layout AuthLayout
 @attribute [AllowAnonymous]
 @using SalesforceTest.Web.Auth
 @using SalesforceTest.Web.Models
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
-@inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>Login</PageTitle>
+<PageTitle>Sign In</PageTitle>
 
-<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+<div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
     <div class="card shadow-sm" style="width: 100%; max-width: 400px;">
         <div class="card-body p-4">
             <h3 class="card-title text-center mb-4">Sign In</h3>
@@ -54,13 +54,6 @@
     private string? _errorMessage;
     private bool _isLoading;
 
-    protected override async Task OnInitializedAsync()
-    {
-        var state = await AuthStateProvider.GetAuthenticationStateAsync();
-        if (state.User.Identity?.IsAuthenticated == true)
-            Navigation.NavigateTo("/");
-    }
-
     private async Task HandleLogin()
     {
         _isLoading = true;
@@ -69,9 +62,7 @@
         var (success, error) = await AuthService.LoginAsync(_model);
 
         if (success)
-        {
-            Navigation.NavigateTo("/");
-        }
+            Navigation.NavigateTo("/", forceLoad: false);
         else
         {
             _errorMessage = error;
