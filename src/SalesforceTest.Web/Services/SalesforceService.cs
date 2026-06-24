@@ -58,6 +58,106 @@ public sealed class SalesforceService : ISalesforceService
         }
     }
 
+    public async Task<IReadOnlyList<SalesforceOrderModel>?> GetOrdersAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var client = await CreateAuthenticatedClientAsync();
+            if (client is null) return null;
+
+            var response = await client.GetAsync("api/salesforce/orders", cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                var message = body.TryGetProperty("message", out var msg) ? msg.GetString() : null;
+                throw new InvalidOperationException(message ?? $"API error {(int)response.StatusCode}");
+            }
+
+            return await response.Content.ReadFromJsonAsync<List<SalesforceOrderModel>>(JsonOptions, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get Salesforce orders.");
+            throw;
+        }
+    }
+
+    public async Task<IReadOnlyList<SalesforceInvoiceModel>?> GetInvoicesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var client = await CreateAuthenticatedClientAsync();
+            if (client is null) return null;
+
+            var response = await client.GetAsync("api/salesforce/invoices", cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                var message = body.TryGetProperty("message", out var msg) ? msg.GetString() : null;
+                throw new InvalidOperationException(message ?? $"API error {(int)response.StatusCode}");
+            }
+
+            return await response.Content.ReadFromJsonAsync<List<SalesforceInvoiceModel>>(JsonOptions, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get Salesforce invoices.");
+            throw;
+        }
+    }
+
+    public async Task<IReadOnlyList<SalesforceAccountModel>?> GetAccountsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var client = await CreateAuthenticatedClientAsync();
+            if (client is null) return null;
+
+            var response = await client.GetAsync("api/salesforce/accounts", cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                var message = body.TryGetProperty("message", out var msg) ? msg.GetString() : null;
+                throw new InvalidOperationException(message ?? $"API error {(int)response.StatusCode}");
+            }
+
+            return await response.Content.ReadFromJsonAsync<List<SalesforceAccountModel>>(JsonOptions, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get Salesforce accounts.");
+            throw;
+        }
+    }
+
+    public async Task<IReadOnlyList<SalesforceContactModel>?> GetContactsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var client = await CreateAuthenticatedClientAsync();
+            if (client is null) return null;
+
+            var response = await client.GetAsync("api/salesforce/contacts", cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                var message = body.TryGetProperty("message", out var msg) ? msg.GetString() : null;
+                throw new InvalidOperationException(message ?? $"API error {(int)response.StatusCode}");
+            }
+
+            return await response.Content.ReadFromJsonAsync<List<SalesforceContactModel>>(JsonOptions, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get Salesforce contacts.");
+            throw;
+        }
+    }
+
     public async Task<bool> DisconnectAsync(CancellationToken cancellationToken = default)
     {
         try

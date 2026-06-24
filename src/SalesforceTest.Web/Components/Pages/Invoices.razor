@@ -1,0 +1,141 @@
+@page "/invoices"
+@attribute [Authorize]
+@using SalesforceTest.Web.Models
+@using SalesforceTest.Web.Services
+@inject ISalesforceService SalesforceService
+
+<PageTitle>Invoices</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h3 class="mb-0">Salesforce Invoices</h3>
+        <button class="btn btn-outline-primary btn-sm" @onclick="LoadInvoices" disabled="@_loading">
+            @if (_loading)
+            {
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+            }
+            Refresh
+        </button>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @_error
+            @if (_notConnected)
+            {
+                <span> <a href="profile" class="alert-link">Connect your Salesforce account</a> to view invoices.</span>
+            }
+        </div>
+    }
+    else if (_loading)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_invoices is not null && _invoices.Count == 0)
+    {
+        <div class="alert alert-info" role="alert">
+            No invoices found in your Salesforce organization.
+        </div>
+    }
+    else if (_invoices is not null)
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Bill To</th>
+                        <th>Status</th>
+                        <th>Invoice Date</th>
+                        <th>Due Date</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-end">Amount w/ Tax</th>
+                        <th class="text-end">Balance</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var invoice in _invoices)
+                    {
+                        <tr>
+                            <td><code>@(invoice.InvoiceNumber ?? invoice.Id)</code></td>
+                            <td>@(invoice.BillToName ?? "—")</td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(invoice.Status)">@invoice.Status</span>
+                            </td>
+                            <td>@(invoice.InvoiceDate.HasValue ? invoice.InvoiceDate.Value.ToString("MMM dd, yyyy") : "—")</td>
+                            <td class="@(IsOverdue(invoice) ? "text-danger fw-semibold" : "")">
+                                @(invoice.DueDate.HasValue ? invoice.DueDate.Value.ToString("MMM dd, yyyy") : "—")
+                            </td>
+                            <td class="text-end">@(invoice.TotalAmount.HasValue ? invoice.TotalAmount.Value.ToString("C") : "—")</td>
+                            <td class="text-end">@(invoice.TotalAmountWithTax.HasValue ? invoice.TotalAmountWithTax.Value.ToString("C") : "—")</td>
+                            <td class="text-end @(invoice.Balance > 0 ? "text-danger" : "text-success")">
+                                @(invoice.Balance.HasValue ? invoice.Balance.Value.ToString("C") : "—")
+                            </td>
+                            <td class="text-muted small">@(invoice.Description ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <small class="text-muted">@_invoices.Count invoice(s) loaded</small>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<SalesforceInvoiceModel>? _invoices;
+    private bool _loading;
+    private string? _error;
+    private bool _notConnected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInvoices();
+    }
+
+    private async Task LoadInvoices()
+    {
+        _loading = true;
+        _error = null;
+        _notConnected = false;
+
+        try
+        {
+            _invoices = await SalesforceService.GetInvoicesAsync();
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
+        {
+            _error = ex.Message;
+            _notConnected = true;
+        }
+        catch (Exception)
+        {
+            _error = "Failed to load invoices. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static bool IsOverdue(SalesforceInvoiceModel invoice) =>
+        invoice.DueDate.HasValue &&
+        invoice.DueDate.Value < DateTime.Today &&
+        invoice.Status != "Paid" &&
+        invoice.Status != "Cancelled";
+
+    private static string GetStatusBadgeClass(string status) => status switch
+    {
+        "Paid"      => "bg-success",
+        "Draft"     => "bg-secondary",
+        "Cancelled" => "bg-danger",
+        "Posted"    => "bg-primary",
+        "Error"     => "bg-warning text-dark",
+        _           => "bg-info text-dark"
+    };
+}

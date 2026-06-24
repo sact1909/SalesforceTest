@@ -1,0 +1,140 @@
+@page "/accounts"
+@attribute [Authorize]
+@using SalesforceTest.Web.Models
+@using SalesforceTest.Web.Services
+@inject ISalesforceService SalesforceService
+
+<PageTitle>Accounts</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h3 class="mb-0">Salesforce Accounts</h3>
+        <button class="btn btn-outline-primary btn-sm" @onclick="LoadAccounts" disabled="@_loading">
+            @if (_loading)
+            {
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+            }
+            Refresh
+        </button>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @_error
+            @if (_notConnected)
+            {
+                <span> <a href="profile" class="alert-link">Connect your Salesforce account</a> to view accounts.</span>
+            }
+        </div>
+    }
+    else if (_loading)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_accounts is not null && _accounts.Count == 0)
+    {
+        <div class="alert alert-info" role="alert">No accounts found in your Salesforce organization.</div>
+    }
+    else if (_accounts is not null)
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Industry</th>
+                        <th>Phone</th>
+                        <th>Website</th>
+                        <th>Location</th>
+                        <th class="text-end">Employees</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var account in _accounts)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@account.Name</td>
+                            <td>@(account.Type ?? "—")</td>
+                            <td>@(account.Industry ?? "—")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(account.Phone))
+                                {
+                                    <a href="tel:@account.Phone">@account.Phone</a>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(account.Website))
+                                {
+                                    <a href="@account.Website" target="_blank" rel="noopener noreferrer">@account.Website</a>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td>@FormatLocation(account.BillingCity, account.BillingCountry)</td>
+                            <td class="text-end">@(account.NumberOfEmployees.HasValue ? account.NumberOfEmployees.Value.ToString("N0") : "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <small class="text-muted">@_accounts.Count account(s) loaded</small>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<SalesforceAccountModel>? _accounts;
+    private bool _loading;
+    private string? _error;
+    private bool _notConnected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccounts();
+    }
+
+    private async Task LoadAccounts()
+    {
+        _loading = true;
+        _error = null;
+        _notConnected = false;
+
+        try
+        {
+            _accounts = await SalesforceService.GetAccountsAsync();
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
+        {
+            _error = ex.Message;
+            _notConnected = true;
+        }
+        catch (Exception)
+        {
+            _error = "Failed to load accounts. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string FormatLocation(string? city, string? country) =>
+        (city, country) switch
+        {
+            (not null, not null) => $"{city}, {country}",
+            (not null, null)    => city,
+            (null, not null)    => country,
+            _                   => "—"
+        };
+}

@@ -1,0 +1,127 @@
+@page "/orders"
+@attribute [Authorize]
+@using SalesforceTest.Web.Models
+@using SalesforceTest.Web.Services
+@inject ISalesforceService SalesforceService
+@inject NavigationManager Navigation
+
+<PageTitle>Orders</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h3 class="mb-0">Salesforce Orders</h3>
+        <button class="btn btn-outline-primary btn-sm" @onclick="LoadOrders" disabled="@_loading">
+            @if (_loading)
+            {
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+            }
+            Refresh
+        </button>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @_error
+            @if (_notConnected)
+            {
+                <span> <a href="profile" class="alert-link">Connect your Salesforce account</a> to view orders.</span>
+            }
+        </div>
+    }
+    else if (_loading)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_orders is not null && _orders.Count == 0)
+    {
+        <div class="alert alert-info" role="alert">
+            No orders found in your Salesforce organization.
+        </div>
+    }
+    else if (_orders is not null)
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Order #</th>
+                        <th>Account</th>
+                        <th>Status</th>
+                        <th>Effective Date</th>
+                        <th class="text-end">Total Amount</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in _orders)
+                    {
+                        <tr>
+                            <td><code>@order.OrderNumber</code></td>
+                            <td>@(order.AccountName ?? "—")</td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(order.Status)">@order.Status</span>
+                            </td>
+                            <td>@(order.EffectiveDate.HasValue ? order.EffectiveDate.Value.ToString("MMM dd, yyyy") : "—")</td>
+                            <td class="text-end">
+                                @(order.TotalAmount.HasValue ? order.TotalAmount.Value.ToString("C") : "—")
+                            </td>
+                            <td class="text-muted small">@(order.Description ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <small class="text-muted">@_orders.Count order(s) loaded</small>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<SalesforceOrderModel>? _orders;
+    private bool _loading;
+    private string? _error;
+    private bool _notConnected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        _loading = true;
+        _error = null;
+        _notConnected = false;
+
+        try
+        {
+            var result = await SalesforceService.GetOrdersAsync();
+            _orders = result;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
+        {
+            _error = ex.Message;
+            _notConnected = true;
+        }
+        catch (Exception)
+        {
+            _error = "Failed to load orders. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string GetStatusBadgeClass(string status) => status switch
+    {
+        "Activated" => "bg-success",
+        "Draft"     => "bg-secondary",
+        "Cancelled" => "bg-danger",
+        _           => "bg-primary"
+    };
+}

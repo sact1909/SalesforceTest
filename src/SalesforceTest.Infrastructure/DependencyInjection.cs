@@ -30,6 +30,7 @@ public static class DependencyInjection
 
         services.AddScoped<ISalesforceConnectionRepository, SalesforceConnectionRepository>();
         services.AddHttpClient<ISalesforceOAuthService, SalesforceOAuthService>();
+        services.AddHttpClient<ISalesforceDataService, SalesforceDataService>();
 
         return services;
     }

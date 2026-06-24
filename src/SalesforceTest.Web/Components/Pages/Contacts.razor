@@ -1,0 +1,141 @@
+@page "/contacts"
+@attribute [Authorize]
+@using SalesforceTest.Web.Models
+@using SalesforceTest.Web.Services
+@inject ISalesforceService SalesforceService
+
+<PageTitle>Contacts</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h3 class="mb-0">Salesforce Contacts</h3>
+        <button class="btn btn-outline-primary btn-sm" @onclick="LoadContacts" disabled="@_loading">
+            @if (_loading)
+            {
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+            }
+            Refresh
+        </button>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @_error
+            @if (_notConnected)
+            {
+                <span> <a href="profile" class="alert-link">Connect your Salesforce account</a> to view contacts.</span>
+            }
+        </div>
+    }
+    else if (_loading)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_contacts is not null && _contacts.Count == 0)
+    {
+        <div class="alert alert-info" role="alert">No contacts found in your Salesforce organization.</div>
+    }
+    else if (_contacts is not null)
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Name</th>
+                        <th>Title</th>
+                        <th>Account</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var contact in _contacts)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@FormatName(contact.FirstName, contact.LastName)</td>
+                            <td>@(contact.Title ?? "—")</td>
+                            <td>@(contact.AccountName ?? "—")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(contact.Email))
+                                {
+                                    <a href="mailto:@contact.Email">@contact.Email</a>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(contact.Phone))
+                                {
+                                    <a href="tel:@contact.Phone">@contact.Phone</a>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td>@FormatLocation(contact.MailingCity, contact.MailingCountry)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <small class="text-muted">@_contacts.Count contact(s) loaded</small>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<SalesforceContactModel>? _contacts;
+    private bool _loading;
+    private string? _error;
+    private bool _notConnected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadContacts();
+    }
+
+    private async Task LoadContacts()
+    {
+        _loading = true;
+        _error = null;
+        _notConnected = false;
+
+        try
+        {
+            _contacts = await SalesforceService.GetContactsAsync();
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
+        {
+            _error = ex.Message;
+            _notConnected = true;
+        }
+        catch (Exception)
+        {
+            _error = "Failed to load contacts. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string FormatName(string? firstName, string lastName) =>
+        string.IsNullOrEmpty(firstName) ? lastName : $"{firstName} {lastName}";
+
+    private static string FormatLocation(string? city, string? country) =>
+        (city, country) switch
+        {
+            (not null, not null) => $"{city}, {country}",
+            (not null, null)    => city,
+            (null, not null)    => country,
+            _                   => "—"
+        };
+}

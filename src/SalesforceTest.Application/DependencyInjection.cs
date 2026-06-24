@@ -13,6 +13,10 @@ public static class DependencyInjection
         services.AddScoped<HandleOAuthCallbackService>();
         services.AddScoped<GetSalesforceConnectionService>();
         services.AddScoped<DisconnectSalesforceService>();
+        services.AddScoped<GetOrdersService>();
+        services.AddScoped<GetInvoicesService>();
+        services.AddScoped<GetAccountsService>();
+        services.AddScoped<GetContactsService>();
         return services;
     }
 }
