@@ -16,6 +16,10 @@ public sealed class SalesforceController : ApiControllerBase
     private readonly GetInvoicesService _getInvoicesService;
     private readonly GetAccountsService _getAccountsService;
     private readonly GetContactsService _getContactsService;
+    private readonly GetAvailableObjectsService _getAvailableObjectsService;
+    private readonly GetObjectRecordsService _getObjectRecordsService;
+    private readonly RescanObjectsService _rescanObjectsService;
+    private readonly RefreshObjectCountService _refreshObjectCountService;
     private readonly IConfiguration _configuration;
 
     public SalesforceController(
@@ -27,6 +31,10 @@ public sealed class SalesforceController : ApiControllerBase
         GetInvoicesService getInvoicesService,
         GetAccountsService getAccountsService,
         GetContactsService getContactsService,
+        GetAvailableObjectsService getAvailableObjectsService,
+        GetObjectRecordsService getObjectRecordsService,
+        RescanObjectsService rescanObjectsService,
+        RefreshObjectCountService refreshObjectCountService,
         IConfiguration configuration)
     {
         _getAuthorizationUrlService = getAuthorizationUrlService;
@@ -37,6 +45,10 @@ public sealed class SalesforceController : ApiControllerBase
         _getInvoicesService = getInvoicesService;
         _getAccountsService = getAccountsService;
         _getContactsService = getContactsService;
+        _getAvailableObjectsService = getAvailableObjectsService;
+        _getObjectRecordsService = getObjectRecordsService;
+        _rescanObjectsService = rescanObjectsService;
+        _refreshObjectCountService = refreshObjectCountService;
         _configuration = configuration;
     }
 
@@ -107,6 +119,46 @@ public sealed class SalesforceController : ApiControllerBase
         if (userId is null) return Unauthorized();
 
         var result = await _getContactsService.ExecuteAsync(userId.Value, cancellationToken);
+        return HandleResult(result);
+    }
+
+    [HttpGet("objects")]
+    public async Task<IActionResult> GetAvailableObjects(CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await _getAvailableObjectsService.ExecuteAsync(userId.Value, cancellationToken);
+        return HandleResult(result);
+    }
+
+    [HttpGet("objects/{objectApiName}/records")]
+    public async Task<IActionResult> GetObjectRecords(string objectApiName, CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await _getObjectRecordsService.ExecuteAsync(userId.Value, objectApiName, cancellationToken);
+        return HandleResult(result);
+    }
+
+    [HttpPost("objects/rescan")]
+    public async Task<IActionResult> RescanObjects(CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await _rescanObjectsService.ExecuteAsync(userId.Value, cancellationToken);
+        return HandleResult(result);
+    }
+
+    [HttpPatch("objects/{objectApiName}/refresh-count")]
+    public async Task<IActionResult> RefreshObjectCount(string objectApiName, CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await _refreshObjectCountService.ExecuteAsync(userId.Value, objectApiName, cancellationToken);
         return HandleResult(result);
     }
 

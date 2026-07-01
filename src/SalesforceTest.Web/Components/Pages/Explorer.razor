@@ -1,0 +1,348 @@
+@page "/explorer"
+@attribute [Authorize]
+@using SalesforceTest.Web.Models
+@using SalesforceTest.Web.Services
+@inject ISalesforceService SalesforceService
+
+<PageTitle>Transaction Explorer</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-1">
+        <h3 class="mb-0">Transaction Explorer</h3>
+        <button class="btn btn-outline-secondary btn-sm" @onclick="Rescan" disabled="@(_loadingObjects || _rescanning)">
+            @if (_rescanning)
+            {
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                <span>Scanning&hellip;</span>
+            }
+            else
+            {
+                <span>Re-Scan</span>
+            }
+        </button>
+    </div>
+
+    @if (_lastScannedAt.HasValue)
+    {
+        <small class="text-muted d-block mb-3">
+            Last scanned: @_lastScannedAt.Value.ToLocalTime().ToString("MMM dd, yyyy HH:mm")
+        </small>
+    }
+    else
+    {
+        <div class="mb-3"></div>
+    }
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @_error
+            @if (_notConnected)
+            {
+                <span> <a href="profile" class="alert-link">Connect your Salesforce account</a> to use the explorer.</span>
+            }
+        </div>
+    }
+    else if (_loadingObjects)
+    {
+        <div class="d-flex align-items-center gap-2 text-muted py-3">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Scanning Salesforce objects for records&hellip; this may take a moment.</span>
+        </div>
+    }
+    else if (_objects is not null)
+    {
+        <div class="row g-3 align-items-end mb-4">
+            <div class="col-auto" style="position:relative;">
+                <label class="form-label fw-semibold mb-1">Object type</label>
+                <div style="position:relative; min-width:320px;">
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Search objects…"
+                           value="@_searchText"
+                           @oninput="OnSearchInput"
+                           @onfocus="() => _dropdownOpen = true"
+                           @onblur="OnSearchBlur"
+                           disabled="@(_loadingRecords || _refreshingCount)"
+                           autocomplete="off" />
+                    @if (_selectedObject is not null && !string.IsNullOrEmpty(_searchText))
+                    {
+                        <button type="button" class="btn-close"
+                                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:.65rem;"
+                                @onmousedown:preventDefault
+                                @onclick="ClearSelection" />
+                    }
+                </div>
+                @if (_dropdownOpen && _filteredObjects is not null && _filteredObjects.Count > 0)
+                {
+                    <ul class="list-group shadow-sm"
+                        style="position:absolute;z-index:1000;min-width:320px;max-height:260px;overflow-y:auto;margin-top:2px;">
+                        @foreach (var obj in _filteredObjects)
+                        {
+                            <li class="list-group-item list-group-item-action py-1 px-2 small"
+                                style="cursor:pointer;"
+                                @onmousedown:preventDefault
+                                @onclick="() => SelectObject(obj)">
+                                <span class="fw-semibold">@obj.LabelPlural</span>
+                                <span class="text-muted ms-1">(@obj.ApiName)</span>
+                                <span class="badge bg-secondary ms-1">@obj.RecordCount.ToString("N0")</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                else if (_dropdownOpen && _filteredObjects is not null && _filteredObjects.Count == 0)
+                {
+                    <ul class="list-group shadow-sm"
+                        style="position:absolute;z-index:1000;min-width:320px;margin-top:2px;">
+                        <li class="list-group-item small text-muted py-1 px-2">No matches</li>
+                    </ul>
+                }
+            </div>
+
+            @if (_selectedObject is not null)
+            {
+                <div class="col-auto d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm" @onclick="LoadRecords" disabled="@(_loadingRecords || _refreshingCount)" title="Reload records from Salesforce">
+                        @if (_loadingRecords)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        Refresh Records
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="RefreshCount" disabled="@(_loadingRecords || _refreshingCount)" title="Update the record count in the dropdown">
+                        @if (_refreshingCount)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        Update Count
+                    </button>
+                </div>
+            }
+        </div>
+
+        @if (_loadingRecords)
+        {
+            <div class="d-flex justify-content-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (_recordsError is not null)
+        {
+            <div class="alert alert-danger" role="alert">@_recordsError</div>
+        }
+        else if (_result is not null)
+        {
+            @if (_result.Records.Count == 0)
+            {
+                <div class="alert alert-info">No records found.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle small">
+                        <thead class="table-dark">
+                            <tr>
+                                @foreach (var field in _result.Fields)
+                                {
+                                    <th title="@field.ApiName (@field.Type)">@field.Label</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var record in _result.Records)
+                            {
+                                <tr>
+                                    @foreach (var field in _result.Fields)
+                                    {
+                                        <td>@(record.TryGetValue(field.ApiName, out var val) && val is not null ? val.ToString() : "—")</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <small class="text-muted">
+                    Showing @_result.Records.Count records &mdash; up to 200 shown &mdash; @(_objects.FirstOrDefault(o => o.ApiName == _result.ObjectApiName)?.RecordCount.ToString("N0") ?? "?") total
+                </small>
+            }
+        }
+    }
+</div>
+
+@code {
+    private IReadOnlyList<SalesforceObjectInfoModel>? _objects;
+    private List<SalesforceObjectInfoModel>? _filteredObjects;
+    private SalesforceObjectRecordsModel? _result;
+    private string? _selectedObject;
+    private string _searchText = string.Empty;
+    private bool _dropdownOpen;
+    private DateTime? _lastScannedAt;
+    private bool _loadingObjects;
+    private bool _loadingRecords;
+    private bool _rescanning;
+    private bool _refreshingCount;
+    private string? _error;
+    private string? _recordsError;
+    private bool _notConnected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loadingObjects = true;
+        try
+        {
+            var result = await SalesforceService.GetAvailableObjectsAsync();
+            if (result is not null)
+            {
+                _objects = result.Objects;
+                _lastScannedAt = result.LastScannedAt;
+            }
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
+        {
+            _error = ex.Message;
+            _notConnected = true;
+        }
+        catch (Exception)
+        {
+            _error = "Failed to load Salesforce objects. Please try again.";
+        }
+        finally
+        {
+            _loadingObjects = false;
+            _filteredObjects = _objects?.ToList();
+        }
+    }
+
+    private async Task Rescan()
+    {
+        _rescanning = true;
+        _error = null;
+        _result = null;
+        _selectedObject = null;
+        _searchText = string.Empty;
+        _dropdownOpen = false;
+
+        try
+        {
+            var result = await SalesforceService.RescanObjectsAsync();
+            if (result is not null)
+            {
+                _objects = result.Objects;
+                _lastScannedAt = result.LastScannedAt;
+                _filteredObjects = _objects.ToList();
+            }
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
+        {
+            _error = ex.Message;
+            _notConnected = true;
+        }
+        catch (Exception)
+        {
+            _error = "Re-scan failed. Please try again.";
+        }
+        finally
+        {
+            _rescanning = false;
+        }
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchText = e.Value?.ToString() ?? string.Empty;
+        _dropdownOpen = true;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        if (_objects is null) return;
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            _filteredObjects = _objects.ToList();
+            return;
+        }
+        var q = _searchText.Trim();
+        _filteredObjects = _objects
+            .Where(o => o.LabelPlural.Contains(q, StringComparison.OrdinalIgnoreCase)
+                     || o.ApiName.Contains(q, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private async Task SelectObject(SalesforceObjectInfoModel obj)
+    {
+        _selectedObject = obj.ApiName;
+        _searchText = $"{obj.LabelPlural} ({obj.ApiName})";
+        _dropdownOpen = false;
+        _result = null;
+        _recordsError = null;
+        await LoadRecords();
+    }
+
+    private void ClearSelection()
+    {
+        _selectedObject = null;
+        _searchText = string.Empty;
+        _result = null;
+        _recordsError = null;
+        _filteredObjects = _objects?.ToList();
+        _dropdownOpen = false;
+    }
+
+    private void OnSearchBlur()
+    {
+        _dropdownOpen = false;
+    }
+
+    private async Task LoadRecords()
+    {
+        if (string.IsNullOrEmpty(_selectedObject)) return;
+
+        _loadingRecords = true;
+        _recordsError = null;
+
+        try
+        {
+            _result = await SalesforceService.GetObjectRecordsAsync(_selectedObject);
+        }
+        catch (Exception ex)
+        {
+            _recordsError = ex.Message;
+        }
+        finally
+        {
+            _loadingRecords = false;
+        }
+    }
+
+    private async Task RefreshCount()
+    {
+        if (string.IsNullOrEmpty(_selectedObject) || _objects is null) return;
+
+        _refreshingCount = true;
+        try
+        {
+            var newCount = await SalesforceService.RefreshObjectCountAsync(_selectedObject);
+            if (newCount.HasValue)
+            {
+                _objects = _objects.Select(o =>
+                    o.ApiName == _selectedObject ? o with { RecordCount = newCount.Value } : o
+                ).ToList();
+                ApplyFilter();
+                var updated = _objects.FirstOrDefault(o => o.ApiName == _selectedObject);
+                if (updated is not null)
+                    _searchText = $"{updated.LabelPlural} ({updated.ApiName})";
+            }
+        }
+        catch (Exception ex)
+        {
+            _recordsError = ex.Message;
+        }
+        finally
+        {
+            _refreshingCount = false;
+        }
+    }
+}

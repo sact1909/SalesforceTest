@@ -158,6 +158,88 @@ public sealed class SalesforceService : ISalesforceService
         }
     }
 
+    public async Task<CachedObjectsResult?> GetAvailableObjectsAsync(CancellationToken cancellationToken = default)
+        => await FetchCachedObjectsResult("api/salesforce/objects", HttpMethod.Get, cancellationToken);
+
+    public async Task<CachedObjectsResult?> RescanObjectsAsync(CancellationToken cancellationToken = default)
+        => await FetchCachedObjectsResult("api/salesforce/objects/rescan", HttpMethod.Post, cancellationToken);
+
+    public async Task<int?> RefreshObjectCountAsync(string objectApiName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var client = await CreateAuthenticatedClientAsync();
+            if (client is null) return null;
+
+            var response = await client.PatchAsync($"api/salesforce/objects/{objectApiName}/refresh-count", null, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                var message = body.TryGetProperty("message", out var msg) ? msg.GetString() : null;
+                throw new InvalidOperationException(message ?? $"API error {(int)response.StatusCode}");
+            }
+
+            return await response.Content.ReadFromJsonAsync<int>(cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh count for {Object}.", objectApiName);
+            throw;
+        }
+    }
+
+    private async Task<CachedObjectsResult?> FetchCachedObjectsResult(string url, HttpMethod method, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var client = await CreateAuthenticatedClientAsync();
+            if (client is null) return null;
+
+            var request = new HttpRequestMessage(method, url);
+            var response = await client.SendAsync(request, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                var message = body.TryGetProperty("message", out var msg) ? msg.GetString() : null;
+                throw new InvalidOperationException(message ?? $"API error {(int)response.StatusCode}");
+            }
+
+            return await response.Content.ReadFromJsonAsync<CachedObjectsResult>(JsonOptions, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch objects from {Url}.", url);
+            throw;
+        }
+    }
+
+    public async Task<SalesforceObjectRecordsModel?> GetObjectRecordsAsync(string objectApiName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var client = await CreateAuthenticatedClientAsync();
+            if (client is null) return null;
+
+            var response = await client.GetAsync($"api/salesforce/objects/{objectApiName}/records", cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                var message = body.TryGetProperty("message", out var msg) ? msg.GetString() : null;
+                throw new InvalidOperationException(message ?? $"API error {(int)response.StatusCode}");
+            }
+
+            return await response.Content.ReadFromJsonAsync<SalesforceObjectRecordsModel>(JsonOptions, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get Salesforce object records for {Object}.", objectApiName);
+            throw;
+        }
+    }
+
     public async Task<bool> DisconnectAsync(CancellationToken cancellationToken = default)
     {
         try

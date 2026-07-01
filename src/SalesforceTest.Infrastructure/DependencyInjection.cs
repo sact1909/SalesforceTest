@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<DatabaseSeeder>();
 
         services.AddScoped<ISalesforceConnectionRepository, SalesforceConnectionRepository>();
+        services.AddScoped<ISalesforceObjectCacheRepository, SalesforceObjectCacheRepository>();
         services.AddHttpClient<ISalesforceOAuthService, SalesforceOAuthService>();
         services.AddHttpClient<ISalesforceDataService, SalesforceDataService>();
 

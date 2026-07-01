@@ -17,6 +17,10 @@ public static class DependencyInjection
         services.AddScoped<GetInvoicesService>();
         services.AddScoped<GetAccountsService>();
         services.AddScoped<GetContactsService>();
+        services.AddScoped<GetAvailableObjectsService>();
+        services.AddScoped<GetObjectRecordsService>();
+        services.AddScoped<RescanObjectsService>();
+        services.AddScoped<RefreshObjectCountService>();
         return services;
     }
 }

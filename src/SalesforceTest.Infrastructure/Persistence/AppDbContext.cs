@@ -10,6 +10,7 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
 
     public DbSet<User> Users => Set<User>();
     public DbSet<SalesforceConnection> SalesforceConnections => Set<SalesforceConnection>();
+    public DbSet<SalesforceObjectCache> SalesforceObjectCaches => Set<SalesforceObjectCache>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +43,16 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
                   .HasForeignKey(sc => sc.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(sc => sc.UserId).IsUnique();
+        });
+
+        modelBuilder.Entity<SalesforceObjectCache>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.ApiName).HasMaxLength(200).IsRequired();
+            entity.Property(c => c.Label).HasMaxLength(200).IsRequired();
+            entity.Property(c => c.LabelPlural).HasMaxLength(200).IsRequired();
+            entity.Property(c => c.FieldsJson).IsRequired();
+            entity.HasIndex(c => new { c.UserId, c.ApiName }).IsUnique();
         });
     }
 }

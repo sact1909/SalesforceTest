@@ -11,4 +11,8 @@ public interface ISalesforceService
     Task<IReadOnlyList<SalesforceInvoiceModel>?> GetInvoicesAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SalesforceAccountModel>?> GetAccountsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SalesforceContactModel>?> GetContactsAsync(CancellationToken cancellationToken = default);
+    Task<CachedObjectsResult?> GetAvailableObjectsAsync(CancellationToken cancellationToken = default);
+    Task<CachedObjectsResult?> RescanObjectsAsync(CancellationToken cancellationToken = default);
+    Task<int?> RefreshObjectCountAsync(string objectApiName, CancellationToken cancellationToken = default);
+    Task<SalesforceObjectRecordsModel?> GetObjectRecordsAsync(string objectApiName, CancellationToken cancellationToken = default);
 }
