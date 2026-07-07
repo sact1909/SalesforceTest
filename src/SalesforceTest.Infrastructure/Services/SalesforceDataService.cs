@@ -243,7 +243,7 @@ public sealed class SalesforceDataService : ISalesforceDataService
         return results;
     }
 
-    public async Task<SalesforceObjectRecordsDto> GetObjectRecordsAsync(string instanceUrl, string accessToken, string objectApiName, CancellationToken cancellationToken = default)
+    public async Task<SalesforceObjectRecordsDto> GetObjectRecordsAsync(string instanceUrl, string accessToken, string objectApiName, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken cancellationToken = default)
     {
         // Describe to get fields
         var describeUrl = $"{instanceUrl}/services/data/v59.0/sobjects/{objectApiName}/describe";
@@ -256,7 +256,15 @@ public sealed class SalesforceDataService : ISalesforceDataService
             .ToList();
 
         var fieldList = string.Join(", ", fields.Select(f => f.ApiName));
-        var soql = $"SELECT {fieldList} FROM {objectApiName} LIMIT 200";
+
+        var whereClauses = new List<string>();
+        if (from.HasValue)
+            whereClauses.Add($"LastModifiedDate >= {from.Value.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}");
+        if (to.HasValue)
+            whereClauses.Add($"LastModifiedDate <= {to.Value.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}");
+
+        var where = whereClauses.Count > 0 ? $" WHERE {string.Join(" AND ", whereClauses)}" : string.Empty;
+        var soql = $"SELECT {fieldList} FROM {objectApiName}{where} LIMIT 200";
         var queryUrl = $"{instanceUrl}/services/data/v59.0/query?q={Uri.EscapeDataString(soql)}";
 
         var request = new HttpRequestMessage(HttpMethod.Get, queryUrl);

@@ -133,12 +133,12 @@ public sealed class SalesforceController : ApiControllerBase
     }
 
     [HttpGet("objects/{objectApiName}/records")]
-    public async Task<IActionResult> GetObjectRecords(string objectApiName, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetObjectRecords(string objectApiName, [FromQuery] DateTimeOffset? from, [FromQuery] DateTimeOffset? to, CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
         if (userId is null) return Unauthorized();
 
-        var result = await _getObjectRecordsService.ExecuteAsync(userId.Value, objectApiName, cancellationToken);
+        var result = await _getObjectRecordsService.ExecuteAsync(userId.Value, objectApiName, from, to, cancellationToken);
         return HandleResult(result);
     }
 

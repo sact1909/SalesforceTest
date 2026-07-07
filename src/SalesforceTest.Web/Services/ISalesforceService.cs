@@ -14,5 +14,5 @@ public interface ISalesforceService
     Task<CachedObjectsResult?> GetAvailableObjectsAsync(CancellationToken cancellationToken = default);
     Task<CachedObjectsResult?> RescanObjectsAsync(CancellationToken cancellationToken = default);
     Task<int?> RefreshObjectCountAsync(string objectApiName, CancellationToken cancellationToken = default);
-    Task<SalesforceObjectRecordsModel?> GetObjectRecordsAsync(string objectApiName, CancellationToken cancellationToken = default);
+    Task<SalesforceObjectRecordsModel?> GetObjectRecordsAsync(string objectApiName, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken cancellationToken = default);
 }

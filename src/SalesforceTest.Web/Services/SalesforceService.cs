@@ -215,14 +215,23 @@ public sealed class SalesforceService : ISalesforceService
         }
     }
 
-    public async Task<SalesforceObjectRecordsModel?> GetObjectRecordsAsync(string objectApiName, CancellationToken cancellationToken = default)
+    public async Task<SalesforceObjectRecordsModel?> GetObjectRecordsAsync(string objectApiName, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken cancellationToken = default)
     {
         try
         {
             var client = await CreateAuthenticatedClientAsync();
             if (client is null) return null;
 
-            var response = await client.GetAsync($"api/salesforce/objects/{objectApiName}/records", cancellationToken);
+            var url = $"api/salesforce/objects/{objectApiName}/records";
+            var queryParams = new List<string>();
+            if (from.HasValue)
+                queryParams.Add($"from={Uri.EscapeDataString(from.Value.ToString("o"))}");
+            if (to.HasValue)
+                queryParams.Add($"to={Uri.EscapeDataString(to.Value.ToString("o"))}");
+            if (queryParams.Count > 0)
+                url += "?" + string.Join("&", queryParams);
+
+            var response = await client.GetAsync(url, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {

@@ -16,7 +16,7 @@ public sealed class GetObjectRecordsService
         _dataService = dataService;
     }
 
-    public async Task<Result<SalesforceObjectRecordsDto>> ExecuteAsync(Guid userId, string objectApiName, CancellationToken cancellationToken = default)
+    public async Task<Result<SalesforceObjectRecordsDto>> ExecuteAsync(Guid userId, string objectApiName, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken cancellationToken = default)
     {
         var connection = await _connectionRepository.GetByUserIdAsync(userId, cancellationToken);
 
@@ -25,7 +25,7 @@ public sealed class GetObjectRecordsService
 
         try
         {
-            var records = await _dataService.GetObjectRecordsAsync(connection.InstanceUrl, connection.AccessToken, objectApiName, cancellationToken);
+            var records = await _dataService.GetObjectRecordsAsync(connection.InstanceUrl, connection.AccessToken, objectApiName, from, to, cancellationToken);
             return Result.Success(records);
         }
         catch (InvalidOperationException ex)

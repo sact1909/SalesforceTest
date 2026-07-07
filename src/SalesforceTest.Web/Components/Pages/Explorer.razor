@@ -101,13 +101,29 @@
 
             @if (_selectedObject is not null)
             {
-                <div class="col-auto d-flex gap-2">
-                    <button class="btn btn-outline-primary btn-sm" @onclick="LoadRecords" disabled="@(_loadingRecords || _refreshingCount)" title="Reload records from Salesforce">
+                <div class="col-auto">
+                    <label class="form-label fw-semibold mb-1">From</label>
+                    <input type="date" class="form-control" style="min-width:150px;"
+                           @bind="_dateFrom"
+                           disabled="@(_loadingRecords || _refreshingCount)" />
+                </div>
+                <div class="col-auto">
+                    <label class="form-label fw-semibold mb-1">To</label>
+                    <input type="date" class="form-control" style="min-width:150px;"
+                           @bind="_dateTo"
+                           disabled="@(_loadingRecords || _refreshingCount)" />
+                </div>
+                <div class="col-auto d-flex gap-2 align-self-end">
+                    <button class="btn btn-primary btn-sm" @onclick="LoadRecords" disabled="@(_loadingRecords || _refreshingCount)" title="Load records from Salesforce">
                         @if (_loadingRecords)
                         {
                             <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <span>Loading&hellip;</span>
                         }
-                        Refresh Records
+                        else
+                        {
+                            <span>Load Records</span>
+                        }
                     </button>
                     <button class="btn btn-outline-secondary btn-sm" @onclick="RefreshCount" disabled="@(_loadingRecords || _refreshingCount)" title="Update the record count in the dropdown">
                         @if (_refreshingCount)
@@ -131,6 +147,12 @@
         else if (_recordsError is not null)
         {
             <div class="alert alert-danger" role="alert">@_recordsError</div>
+        }
+        else if (_selectedObject is not null && _result is null)
+        {
+            <div class="alert alert-secondary mt-2">
+                Select a date range (optional) and click <strong>Load Records</strong> to fetch data.
+            </div>
         }
         else if (_result is not null)
         {
@@ -186,6 +208,8 @@
     private string? _error;
     private string? _recordsError;
     private bool _notConnected;
+    private DateTime? _dateFrom;
+    private DateTime? _dateTo;
 
     protected override async Task OnInitializedAsync()
     {
@@ -271,14 +295,15 @@
             .ToList();
     }
 
-    private async Task SelectObject(SalesforceObjectInfoModel obj)
+    private void SelectObject(SalesforceObjectInfoModel obj)
     {
         _selectedObject = obj.ApiName;
         _searchText = $"{obj.LabelPlural} ({obj.ApiName})";
         _dropdownOpen = false;
         _result = null;
         _recordsError = null;
-        await LoadRecords();
+        _dateFrom = null;
+        _dateTo = null;
     }
 
     private void ClearSelection()
@@ -289,6 +314,8 @@
         _recordsError = null;
         _filteredObjects = _objects?.ToList();
         _dropdownOpen = false;
+        _dateFrom = null;
+        _dateTo = null;
     }
 
     private void OnSearchBlur()
@@ -305,7 +332,9 @@
 
         try
         {
-            _result = await SalesforceService.GetObjectRecordsAsync(_selectedObject);
+            var from = _dateFrom.HasValue ? new DateTimeOffset(_dateFrom.Value, TimeSpan.Zero) : (DateTimeOffset?)null;
+            var to = _dateTo.HasValue ? new DateTimeOffset(_dateTo.Value.AddDays(1).AddTicks(-1), TimeSpan.Zero) : (DateTimeOffset?)null;
+            _result = await SalesforceService.GetObjectRecordsAsync(_selectedObject, from, to);
         }
         catch (Exception ex)
         {
