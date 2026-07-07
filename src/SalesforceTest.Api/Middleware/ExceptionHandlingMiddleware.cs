@@ -1,4 +1,4 @@
-using SalesforceTest.Domain.Exceptions;
+using SalesforceTest.Api.Exceptions;
 using System.Net;
 using System.Text.Json;
 

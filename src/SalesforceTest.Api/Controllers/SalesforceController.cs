@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SalesforceTest.Application.Features.Salesforce;
+using SalesforceTest.Api.Features.Salesforce;
 using System.Security.Claims;
 
 namespace SalesforceTest.Api.Controllers;

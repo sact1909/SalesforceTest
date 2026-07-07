@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using SalesforceTest.Application.DTOs.Auth;
-using SalesforceTest.Application.Features.Auth;
+using SalesforceTest.Api.DTOs.Auth;
+using SalesforceTest.Api.Features.Auth;
 
 namespace SalesforceTest.Api.Controllers;
 

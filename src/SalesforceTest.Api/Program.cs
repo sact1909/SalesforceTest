@@ -1,14 +1,72 @@
-using SalesforceTest.Application;
-using SalesforceTest.Infrastructure;
-using SalesforceTest.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using SalesforceTest.Api.Features.Auth;
+using SalesforceTest.Api.Features.Salesforce;
+using SalesforceTest.Api.Interfaces;
 using SalesforceTest.Api.Middleware;
-using SalesforceTest.Api.Extensions;
+using SalesforceTest.Api.Persistence;
+using SalesforceTest.Api.Repositories;
+using SalesforceTest.Api.Services;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddJwtAuthentication(builder.Configuration);
+// Database
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=salesforcetest.db";
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
+builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
+
+// Repositories
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ISalesforceConnectionRepository, SalesforceConnectionRepository>();
+builder.Services.AddScoped<ISalesforceObjectCacheRepository, SalesforceObjectCacheRepository>();
+
+// Services
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddHttpClient<ISalesforceOAuthService, SalesforceOAuthService>();
+builder.Services.AddHttpClient<ISalesforceDataService, SalesforceDataService>();
+builder.Services.AddScoped<DatabaseSeeder>();
+
+// Feature services
+builder.Services.AddScoped<LoginService>();
+builder.Services.AddScoped<GetAuthorizationUrlService>();
+builder.Services.AddScoped<HandleOAuthCallbackService>();
+builder.Services.AddScoped<GetSalesforceConnectionService>();
+builder.Services.AddScoped<DisconnectSalesforceService>();
+builder.Services.AddScoped<GetOrdersService>();
+builder.Services.AddScoped<GetInvoicesService>();
+builder.Services.AddScoped<GetAccountsService>();
+builder.Services.AddScoped<GetContactsService>();
+builder.Services.AddScoped<GetAvailableObjectsService>();
+builder.Services.AddScoped<GetObjectRecordsService>();
+builder.Services.AddScoped<RescanObjectsService>();
+builder.Services.AddScoped<RefreshObjectCountService>();
+
+// JWT Authentication
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JwtSettings:SecretKey is not configured.");
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        ClockSkew = TimeSpan.Zero
+    };
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -24,7 +82,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Auto-migrate and seed on startup
 using (var scope = app.Services.CreateScope())
 {
     var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();

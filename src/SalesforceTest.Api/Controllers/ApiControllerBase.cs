@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using SalesforceTest.Application.Common;
+using SalesforceTest.Api.Common;
 
 namespace SalesforceTest.Api.Controllers;
 
