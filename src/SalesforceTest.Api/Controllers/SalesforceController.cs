@@ -12,10 +12,6 @@ public sealed class SalesforceController : ApiControllerBase
     private readonly HandleOAuthCallbackService _handleOAuthCallbackService;
     private readonly GetSalesforceConnectionService _getSalesforceConnectionService;
     private readonly DisconnectSalesforceService _disconnectSalesforceService;
-    private readonly GetOrdersService _getOrdersService;
-    private readonly GetInvoicesService _getInvoicesService;
-    private readonly GetAccountsService _getAccountsService;
-    private readonly GetContactsService _getContactsService;
     private readonly GetAvailableObjectsService _getAvailableObjectsService;
     private readonly GetObjectRecordsService _getObjectRecordsService;
     private readonly RescanObjectsService _rescanObjectsService;
@@ -27,10 +23,6 @@ public sealed class SalesforceController : ApiControllerBase
         HandleOAuthCallbackService handleOAuthCallbackService,
         GetSalesforceConnectionService getSalesforceConnectionService,
         DisconnectSalesforceService disconnectSalesforceService,
-        GetOrdersService getOrdersService,
-        GetInvoicesService getInvoicesService,
-        GetAccountsService getAccountsService,
-        GetContactsService getContactsService,
         GetAvailableObjectsService getAvailableObjectsService,
         GetObjectRecordsService getObjectRecordsService,
         RescanObjectsService rescanObjectsService,
@@ -41,10 +33,6 @@ public sealed class SalesforceController : ApiControllerBase
         _handleOAuthCallbackService = handleOAuthCallbackService;
         _getSalesforceConnectionService = getSalesforceConnectionService;
         _disconnectSalesforceService = disconnectSalesforceService;
-        _getOrdersService = getOrdersService;
-        _getInvoicesService = getInvoicesService;
-        _getAccountsService = getAccountsService;
-        _getContactsService = getContactsService;
         _getAvailableObjectsService = getAvailableObjectsService;
         _getObjectRecordsService = getObjectRecordsService;
         _rescanObjectsService = rescanObjectsService;
@@ -79,46 +67,6 @@ public sealed class SalesforceController : ApiControllerBase
         if (userId is null) return Unauthorized();
 
         var result = await _disconnectSalesforceService.ExecuteAsync(userId.Value, cancellationToken);
-        return HandleResult(result);
-    }
-
-    [HttpGet("orders")]
-    public async Task<IActionResult> GetOrders(CancellationToken cancellationToken)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await _getOrdersService.ExecuteAsync(userId.Value, cancellationToken);
-        return HandleResult(result);
-    }
-
-    [HttpGet("invoices")]
-    public async Task<IActionResult> GetInvoices(CancellationToken cancellationToken)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await _getInvoicesService.ExecuteAsync(userId.Value, cancellationToken);
-        return HandleResult(result);
-    }
-
-    [HttpGet("accounts")]
-    public async Task<IActionResult> GetAccounts(CancellationToken cancellationToken)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await _getAccountsService.ExecuteAsync(userId.Value, cancellationToken);
-        return HandleResult(result);
-    }
-
-    [HttpGet("contacts")]
-    public async Task<IActionResult> GetContacts(CancellationToken cancellationToken)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await _getContactsService.ExecuteAsync(userId.Value, cancellationToken);
         return HandleResult(result);
     }
 
